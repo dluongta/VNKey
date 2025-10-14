@@ -1,0 +1,21 @@
+# Visual Studio build files
+.vs/
+*.vcxproj.user
+*.suo
+*.ipch
+*.pch
+*.obj
+*.log
+*.ilk
+*.cache
+*.pdb
+*.tlog
+*.idb
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.VC.opendb
+Debug/
+Release/
+x64/Debug/
+x64/Release/
