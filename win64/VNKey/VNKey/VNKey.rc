@@ -269,7 +269,7 @@ EXSTYLE WS_EX_TRANSPARENT
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     ICON            IDI_APP_ICON,IDC_STATIC,10,13,20,20
-    LTEXT           "VNKey - Bộ gõ Tiếng Việt nguồn mở đa nền tảng",IDC_STATIC_APP_TITLE,39,9,206,8,SS_NOPREFIX
+    LTEXT           "VNKey - Bộ gõ Tiếng Việt",IDC_STATIC_APP_TITLE,39,9,206,8,SS_NOPREFIX
     LTEXT           "Trang chủ",IDC_STATIC_APP_TITLE2,39,19,37,8,SS_NOPREFIX
     CONTROL         "<a>https://github.com/dluongta</a>",IDC_SYSLINK_HOME_PAGE,
                     "SysLink",WS_TABSTOP,81,19,101,10
