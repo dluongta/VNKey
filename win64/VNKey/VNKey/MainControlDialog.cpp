@@ -133,7 +133,7 @@ void MainControlDialog::initDialog() {
     createToolTip(checkAllowOtherLanguages, IDS_STRING_OTHER_LANGUAGES);
 
     checkTempOffVNKey = GetDlgItem(hTabPage1, IDC_CHECK_TEMP_OFF_OPEN_KEY);
-    createToolTip(checkTempOffVNKey, IDS_STRING_TEMP_OFF_OPENKEY);
+    createToolTip(checkTempOffVNKey, IDS_STRING_TEMP_OFF_VNKEY);
 
     /*------------end tab 1----------------*/
 

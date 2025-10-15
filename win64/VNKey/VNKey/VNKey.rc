@@ -56,7 +56,7 @@ IDI_ICON_START_CONVERT  ICON                    "StartConvert.ico"
 // Menu
 //
 
-IDC_OPENKEY MENU
+IDC_VNKEY MENU
 BEGIN
     POPUP "&File"
     BEGIN
@@ -74,7 +74,7 @@ END
 // Accelerator
 //
 
-IDC_OPENKEY ACCELERATORS
+IDC_VNKEY ACCELERATORS
 BEGIN
     "?",            IDM_ABOUT,              ASCII,  ALT
     "/",            IDM_ABOUT,              ASCII,  ALT
@@ -452,7 +452,7 @@ BEGIN
                             "Chuyển mã thành công!\nKết quả đã được lưu trong Clipboard!"
     IDS_MAIN_DIALOG_TITLE   "VNKey %s - Bộ gõ Tiếng Việt"
     IDS_STRING_MODERN_ORTHORGRAPHY "Bor d"
-    IDC_OPENKEY             "VNKEY"
+    IDC_VNKEY             "VNKEY"
     IDS_STRING_MORDEN_ORTHORGRAPHY 
                             "Bỏ dấu kiểu cũ: ""hòa, thúy"" thay vì kiểu mới: ""hoà, thuý"""
     IDS_STRING_FIX_BROWSER  "Sửa lỗi đúp từ trên thanh địa chỉ trình duyệt, Microsoft Excel,..."
@@ -484,7 +484,7 @@ BEGIN
     IDS_STRING_CHECK_UPDATE "Kiểm tra bản mới mỗi lần khởi động VNKey"
     IDS_STRING_REMEMBER_TABLE_CODE 
                             "VNKey sẽ tự động ghi nhớ bạn đã dùng bảng mã nào cho ứng dụng nào, để lần sau khi chuyển qua ứng dụng đó, VNKey sẽ tự động chuyển sang bảng mã đó cho bạn. Rất thích hợp cho các ứng dụng kỹ thuật như Photoshop, CAD,..."
-    IDS_STRING_TEMP_OFF_OPENKEY 
+    IDS_STRING_TEMP_OFF_VNKEY 
                             "Bằng cách bấm phím Alt, VNKey sẽ tạm ngừng hoạt động cho tới khi bạn gõ 1 từ mới."
 END
 

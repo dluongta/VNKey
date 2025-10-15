@@ -1,7 +1,7 @@
 
 
-#ifndef OPENKEY_WIN32_H
-#define OPENKEY_WIN32_H
+#ifndef VNKEY_WIN64_H
+#define VNKEY_WIN64_H
 #include <windows.h>
 
 //define Key code for Windows keyboard
@@ -71,4 +71,4 @@
 #define KEY_COMMA                               VK_OEM_COMMA
 #define KEY_SLASH                               191
 
-#endif //OPENKEY_WIN32_H
+#endif //VNKEY_WIN64_H

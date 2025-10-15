@@ -26,7 +26,7 @@ static string _unknownProgram = "UnknownProgram";
 
 int CF_RTF = RegisterClipboardFormat(_T("Rich Text Format"));
 int CF_HTML = RegisterClipboardFormat(_T("HTML Format"));
-int CF_OPENKEY = RegisterClipboardFormat(_T("VNKey Format"));
+int CF_VNKEY = RegisterClipboardFormat(_T("VNKey Format"));
 
 void VNKeyHelper::openKey() {
 	LONG nError = RegOpenKeyEx(HKEY_CURRENT_USER, sk, NULL, KEY_ALL_ACCESS, &hKey);

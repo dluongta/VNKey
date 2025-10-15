@@ -4,7 +4,7 @@
 
 extern int CF_RTF;
 extern int CF_HTML;
-extern int CF_OPENKEY;
+extern int CF_VNKEY;
 
 class VNKeyHelper {
 private:

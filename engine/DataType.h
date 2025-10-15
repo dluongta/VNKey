@@ -76,7 +76,7 @@ struct vKeyHookState {
 
 #ifdef LINUX
 #include "platforms/linux.h"
-#elif _WIN32
+#elif _WIN64
 #include "platforms/win32.h"
 #else
 #include "platforms/mac.h"
