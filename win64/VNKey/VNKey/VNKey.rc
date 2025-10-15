@@ -1,4 +1,4 @@
-// Microsoft Visual C++ generated resource script.
+﻿// Microsoft Visual C++ generated resource script.
 //
 #pragma code_page(65001)
 
@@ -271,14 +271,14 @@ BEGIN
     ICON            IDI_APP_ICON,IDC_STATIC,10,13,20,20
     LTEXT           "VNKey - Bộ gõ Tiếng Việt nguồn mở đa nền tảng",IDC_STATIC_APP_TITLE,39,9,206,8,SS_NOPREFIX
     LTEXT           "Trang chủ",IDC_STATIC_APP_TITLE2,39,19,37,8,SS_NOPREFIX
-    CONTROL         "<a> </a>",IDC_SYSLINK_HOME_PAGE,
+    CONTROL         "<a>https://github.com/dluongta</a>",IDC_SYSLINK_HOME_PAGE,
                     "SysLink",WS_TABSTOP,81,19,101,10
     LTEXT           "Facebook",IDC_STATIC_APP_TITLE3,39,29,37,8,SS_NOPREFIX
-    CONTROL         "<a> </a>",IDC_SYSLINK_FANPAGE,
+    CONTROL         "<a>https://www.facebook.com/dluongta</a>",IDC_SYSLINK_FANPAGE,
                     "SysLink",WS_TABSTOP,81,29,184,10
     LTEXT           "VNKey cho Windows là phần mềm mã nguồn mở và được phát hành miễn phí. Bạn hoàn toàn có thể đóng góp ý kiến, yêu cầu tính năng mới qua email của tác giả hoặc trên github.",IDC_STATIC_APP_SUB_TITLE5,39,61,234,28
     LTEXT           "DLUONGTA © 2025 - ",IDC_STATIC_APP_SUB_TITLE6,39,94,78,8
-    CONTROL         "<a>maivutuyen.91@gmail.com</a>",IDC_SYSLINK_AUTHOR_EMAIL,
+    CONTROL         "<a>dluongta@gmail.com</a>",IDC_SYSLINK_AUTHOR_EMAIL,
                     "SysLink",WS_TABSTOP,117,94,101,10
     LTEXT           "Phien ban",IDC_STATIC_APP_VERSION_INFO,39,50,227,8
     PUSHBUTTON      "Mã nguồn...",IDC_BUTTON_GO_SOURCE_CODE,226,91,50,14
