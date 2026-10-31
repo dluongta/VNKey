@@ -7,4 +7,4 @@ g++ VNKey.cpp -o VNKey.exe -mwindows -static -static-libgcc -static-libstdc++ -O
 
 ### Run
 
-Open VNKey.exe
+- Open VNKey.exe
