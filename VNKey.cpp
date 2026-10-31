@@ -1,3 +1,10 @@
+#ifndef WINVER
+#define WINVER 0x0600
+#endif
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+#endif
+
 #ifndef UNICODE
 #define UNICODE
 #endif
@@ -10,6 +17,7 @@
 #include <string>
 #include <vector>
 #include <cwctype>
+#include <cstring>
 
 // Tự động liên kết thư viện khi biên dịch bằng Visual Studio (MSVC)
 #pragma comment(lib, "user32.lib")
@@ -477,41 +485,92 @@ bool ProcessKey(wchar_t ch) {
     return false;
 }
 
-// Tạo Icon chữ V (đỏ) và chữ E (xanh) không cần thư viện gdi32
+// Tạo Icon chữ V (đỏ) và chữ E (xanh) độ phân giải cao 64x64, khử răng cưa SSAA 8x8 siêu nét
 HICON CreateTrayIcon(bool isViet) {
-    DWORD pixels[16 * 16];
-    BYTE andMask[32] = {0};
+    const int size = 64;
+    static DWORD pixels[size * size];
+    static BYTE andMask[(size * size) / 8];
+    memset(andMask, 0, sizeof(andMask));
 
-    DWORD bgColor = isViet ? 0xFFD22323 : 0xFF1E69D2;
-    DWORD fgColor = 0xFFFFFFFF;
+    for (int y = 0; y < size; y++) {
+        for (int x = 0; x < size; x++) {
+            int fgHits = 0;
+            int bgHits = 0;
 
-    for (int i = 0; i < 256; i++) {
-        pixels[i] = bgColor;
-    }
+            // Lấy mẫu siêu phân giải 8x8 (64 điểm phụ trên mỗi pixel) để viền chữ mượt tuyệt đối
+            for (int sy = 0; sy < 8; sy++) {
+                for (int sx = 0; sx < 8; sx++) {
+                    float px = x + (sx + 0.5f) / 8.0f;
+                    float py = y + (sy + 0.5f) / 8.0f;
 
-    const unsigned short glyphV[16] = {
-        0x0000, 0x0000, 0x0000, 0x1818, 0x1818, 0x0C30, 0x0C30, 0x0660,
-        0x0660, 0x03C0, 0x03C0, 0x0180, 0x0180, 0x0000, 0x0000, 0x0000
-    };
-    const unsigned short glyphE[16] = {
-        0x0000, 0x0000, 0x0000, 0x0FF0, 0x0FF0, 0x0C00, 0x0C00, 0x0FE0,
-        0x0FE0, 0x0C00, 0x0C00, 0x0FF0, 0x0FF0, 0x0000, 0x0000, 0x0000
-    };
+                    // Tạo khung hình vuông bo góc (bán kính góc bo R = 10)
+                    float dx = 0.0f, dy = 0.0f;
+                    if (px < 10.0f) dx = 10.0f - px;
+                    else if (px > 54.0f) dx = px - 54.0f;
+                    if (py < 10.0f) dy = 10.0f - py;
+                    else if (py > 54.0f) dy = py - 54.0f;
 
-    const unsigned short* glyph = isViet ? glyphV : glyphE;
-    for (int y = 0; y < 16; y++) {
-        for (int x = 0; x < 16; x++) {
-            if (glyph[y] & (0x8000 >> x)) {
-                pixels[y * 16 + x] = fgColor;
+                    if (dx * dx + dy * dy <= 100.0f) {
+                        bgHits++;
+                        bool inText = false;
+
+                        if (isViet) {
+                            // Vẽ chữ V cân đối, sắc sảo (cao từ y=14 đến y=50)
+                            if (py >= 14.0f && py <= 50.0f) {
+                                float t = (py - 14.0f) / 36.0f;
+                                float leftCenter  = 15.5f + t * 16.5f; // Nét trái kéo xuống tâm (32)
+                                float rightCenter = 48.5f - t * 16.5f; // Nét phải kéo xuống tâm (32)
+                                float halfWidth   = 4.6f - t * 0.4f;   // Độ dày nét chữ
+
+                                float dL = px - leftCenter;  if (dL < 0) dL = -dL;
+                                float dR = px - rightCenter; if (dR < 0) dR = -dR;
+                                if (dL <= halfWidth || dR <= halfWidth) {
+                                    inText = true;
+                                }
+                            }
+                        } else {
+                            // Vẽ chữ E: Cột dọc (dày 8px) + 3 gạch ngang dài đều (px 25->47) và dày bằng nhau chính xác 7.5px (khe hở đối xứng 6.75px)
+                            if (py >= 14.0f && py <= 50.0f) {
+                                if (px >= 17.0f && px <= 25.0f) inText = true;                                       // Cột dọc
+                                else if (px >= 25.0f && px <= 47.0f && py <= 21.5f) inText = true;                   // Thanh ngang trên (14.0f -> 21.5f, dày 7.5f)
+                                else if (px >= 25.0f && px <= 47.0f && py >= 28.25f && py <= 35.75f) inText = true; // Thanh ngang giữa (28.25f -> 35.75f, dày 7.5f)
+                                else if (px >= 25.0f && px <= 47.0f && py >= 42.5f) inText = true;                   // Thanh ngang dưới (42.5f -> 50.0f, dày 7.5f)
+                            }
+                        }
+
+                        if (inText) fgHits++;
+                    }
+                }
+            }
+
+            if (bgHits == 0) {
+                pixels[y * size + x] = 0x00000000; // Điểm ngoài góc bo hoàn toàn trong suốt
+            } else {
+                float textAlpha = (float)fgHits / (float)bgHits;
+                float boxAlpha  = (float)bgHits / 64.0f;
+
+                // Màu nền: Đỏ tươi (V) hoặc Xanh dương (E)
+                int bgR = isViet ? 215 : 25;
+                int bgG = isViet ? 30  : 110;
+                int bgB = isViet ? 35  : 215;
+
+                // Hòa trộn màu chữ trắng (255,255,255) với màu nền
+                int r = (int)(255.0f * textAlpha + bgR * (1.0f - textAlpha));
+                int g = (int)(255.0f * textAlpha + bgG * (1.0f - textAlpha));
+                int b = (int)(255.0f * textAlpha + bgB * (1.0f - textAlpha));
+                int a = (int)(255.0f * boxAlpha);
+
+                pixels[y * size + x] = ((DWORD)a << 24) | ((DWORD)r << 16) | ((DWORD)g << 8) | (DWORD)b;
             }
         }
     }
 
-    return CreateIcon(GetModuleHandleW(NULL), 16, 16, 1, 32, andMask, (const BYTE*)pixels);
+    return CreateIcon(GetModuleHandleW(NULL), size, size, 1, 32, andMask, (const BYTE*)pixels);
 }
 
 // Cập nhật trạng thái icon dưới System Tray
 void UpdateTrayIcon() {
+    g_nid.uFlags = NIF_ICON | NIF_TIP; // Chỉ cập nhật Icon và Tooltip để không kích hoạt lại Balloon
     g_nid.hIcon = g_isVietnamese ? g_hIconV : g_hIconE;
     wcscpy_s(g_nid.szTip, g_isVietnamese
         ? L"VNKey: Tiếng Việt (Ctrl+Shift)"
@@ -684,7 +743,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     g_hWnd = CreateWindowExW(0, wc.lpszClassName, L"VNKey", 0, 0, 0, 0, 0,
                              HWND_MESSAGE, NULL, hInstance, NULL);
 
-    // Tạo icon V / E và đưa xuống khay hệ thống
+    // Tạo icon V / E 64x64 siêu nét và đưa xuống khay hệ thống
     g_hIconV = CreateTrayIcon(true);
     g_hIconE = CreateTrayIcon(false);
 
@@ -697,7 +756,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     wcscpy_s(g_nid.szTip, L"VNKey: Tiếng Việt (Ctrl+Shift)");
     wcscpy_s(g_nid.szInfoTitle, L"Bộ gõ VNKey đã bật");
     wcscpy_s(g_nid.szInfo, L"Nhấn Ctrl+Shift để chuyển chế độ V/E.\nClick chuột phải vào icon [V] dưới khay hệ thống để tùy chỉnh.");
-    g_nid.dwInfoFlags = NIIF_INFO;
+
+    // 0x00000004 = NIIF_USER (dùng icon tùy chỉnh), 0x00000020 = NIIF_LARGE_ICON (hiển thị icon kích thước lớn)
+    g_nid.dwInfoFlags = 0x00000004 | 0x00000020;
+    g_nid.hBalloonIcon = g_hIconV;
+
     Shell_NotifyIconW(NIM_ADD, &g_nid);
 
     // Cài đặt Hook bàn phím và chuột toàn cục
