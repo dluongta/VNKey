@@ -20,10 +20,10 @@
 4. **Save Your Settings:**
    * Click the **OK** button at the bottom right to save the changes.
 
-5. **Rebuild Your Project:**
+5. **Build Your Project:**
    * To apply the new configuration, go to the top menu and select **Build and run** (or press **F9** to build a new executable file).
 
 
 ### Run
 
-- Open VNKey.exe
+Open VNKey.exe
