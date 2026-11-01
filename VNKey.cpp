@@ -1,4 +1,3 @@
-// BẮT BUỘC đặt ở đầu file để mở khóa hBalloonIcon, NIIF_LARGE_ICON và SetProcessDPIAware
 #ifndef WINVER
 #define WINVER 0x0600
 #endif
