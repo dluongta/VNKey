@@ -18,6 +18,7 @@
 #include <vector>
 #include <cwctype>
 #include <cstring>
+#include <cmath>
 
 // Tự động liên kết thư viện khi biên dịch bằng Visual Studio (MSVC)
 #pragma comment(lib, "user32.lib")
@@ -26,19 +27,22 @@
 using namespace std;
 
 // Định nghĩa các hằng số giao diện System Tray
-#define WM_TRAYICON (WM_USER + 100)
-#define ID_TRAY_TOGGLE_VE 1001
+#define WM_TRAYICON         (WM_USER + 100)
+#define ID_TRAY_TOGGLE_VE   1001
 #define ID_TRAY_MODERN_TONE 1002
-#define ID_TRAY_CHROME_FIX 1003
-#define ID_TRAY_EXIT 1004
+#define ID_TRAY_CHROME_FIX  1003
+#define ID_TRAY_EXIT        1004
 
 // Biến toàn cục quản lý trạng thái
 HHOOK g_hKeyboardHook = NULL;
 HHOOK g_hMouseHook = NULL;
-HWND g_hWnd = NULL;
+HWND  g_hWnd = NULL;
 NOTIFYICONDATAW g_nid = {0};
-HICON g_hIconV = NULL;
-HICON g_hIconE = NULL;
+
+HICON g_hIconV = NULL;       // Icon nhỏ siêu nét (System Tray & góc trái trên thông báo cạnh VNKey.exe)
+HICON g_hIconE = NULL;       // Icon nhỏ siêu nét (System Tray)
+HICON g_hIconLargeV = NULL;  // Icon lớn 64x64 siêu nét (Bên trong nội dung thông báo)
+HICON g_hIconLargeE = NULL;  // Icon lớn 64x64 siêu nét
 
 bool g_isVietnamese = true;     // true = Tiếng Việt (V), false = Tiếng Anh (E)
 bool g_modernTone = false;      // false = hòa, thúy (kiểu cũ) | true = hoà, thuý (kiểu mới)
@@ -88,7 +92,8 @@ const wchar_t VOWEL_TABLE[24][6] = {
     {L'\x01A0', L'\x1EDA', L'\x1EDC', L'\x1EDE', L'\x1EE0', L'\x1EE2'},
     {L'U', L'\x00DA', L'\x00D9', L'\x1EE6', L'\x0168', L'\x1EE4'},
     {L'\x01AF', L'\x1EE8', L'\x1EEA', L'\x1EEC', L'\x1EEE', L'\x1EF0'},
-    {L'Y', L'\x00DD', L'\x1EF2', L'\x1EF6', L'\x1EF8', L'\x1EF4'}};
+    {L'Y', L'\x00DD', L'\x1EF2', L'\x1EF6', L'\x1EF8', L'\x1EF4'}
+};
 
 // Tra cứu nguyên âm trong bảng
 bool GetVowelInfo(wchar_t ch, int &row, int &tone)
@@ -564,13 +569,24 @@ bool ProcessKey(wchar_t ch)
     return false;
 }
 
-// Tạo Icon chữ V (đỏ) và chữ E (xanh) độ phân giải cao 64x64, khử răng cưa SSAA 8x8 siêu nét
-HICON CreateTrayIcon(bool isViet)
+// Tạo Icon chữ V (đỏ) và chữ E (xanh) với độ phân giải tùy biến (hỗ trợ cả bản nhỏ 16..32px và bản lớn 64px)
+// Sử dụng lấy mẫu siêu phân giải SSAA 16x16 (256 mẫu/pixel) + Bù sáng Gamma để nét chéo chữ V liền mạch, tuyệt đối không răng cưa
+HICON CreateTrayIcon(bool isViet, int size)
 {
-    const int size = 64;
-    static DWORD pixels[size * size];
-    static BYTE andMask[(size * size) / 8];
-    memset(andMask, 0, sizeof(andMask));
+    if (size < 16) size = 16;
+    if (size > 64) size = 64;
+
+    vector<DWORD> pixels(size * size, 0);
+    // Cấp phát mảng mask chuẩn 16-bit aligned cho mọi kích thước icon
+    int maskRowBytes = ((size + 15) / 16) * 2;
+    vector<BYTE> andMask(maskRowBytes * size, 0);
+
+    const int subSamples = 16; // 16x16 = 256 điểm lấy mẫu trên mỗi pixel
+    const float invSub = 1.0f / (float)subSamples;
+    const float normScale = 64.0f / (float)size;
+
+    // Tăng nhẹ độ dày nét khi ở kích thước nhỏ (16x16..24x24) để nét chữ V đanh, liền và rõ như icon lớn
+    const float vHalfWidthBase = (size <= 28) ? 5.25f : 4.6f;
 
     for (int y = 0; y < size; y++)
     {
@@ -579,15 +595,16 @@ HICON CreateTrayIcon(bool isViet)
             int fgHits = 0;
             int bgHits = 0;
 
-            // Lấy mẫu siêu phân giải 8x8 (64 điểm phụ trên mỗi pixel) để viền chữ mượt tuyệt đối
-            for (int sy = 0; sy < 8; sy++)
+            for (int sy = 0; sy < subSamples; sy++)
             {
-                for (int sx = 0; sx < 8; sx++)
-                {
-                    float px = x + (sx + 0.5f) / 8.0f;
-                    float py = y + (sy + 0.5f) / 8.0f;
+                // Quy đổi tọa độ pixel hiện tại về hệ tọa độ chuẩn 64x64
+                float py = (y + (sy + 0.5f) * invSub) * normScale;
 
-                    // Tạo khung hình vuông bo góc (bán kính góc bo R = 10)
+                for (int sx = 0; sx < subSamples; sx++)
+                {
+                    float px = (x + (sx + 0.5f) * invSub) * normScale;
+
+                    // Tạo khung hình vuông bo góc mượt (bán kính góc bo R = 10)
                     float dx = 0.0f, dy = 0.0f;
                     if (px < 10.0f)
                         dx = 10.0f - px;
@@ -611,14 +628,13 @@ HICON CreateTrayIcon(bool isViet)
                                 float t = (py - 14.0f) / 36.0f;
                                 float leftCenter = 15.5f + t * 16.5f;  // Nét trái kéo xuống tâm (32)
                                 float rightCenter = 48.5f - t * 16.5f; // Nét phải kéo xuống tâm (32)
-                                float halfWidth = 4.6f - t * 0.4f;     // Độ dày nét chữ
+                                float halfWidth = vHalfWidthBase - t * 0.35f;
 
                                 float dL = px - leftCenter;
-                                if (dL < 0)
-                                    dL = -dL;
+                                if (dL < 0) dL = -dL;
                                 float dR = px - rightCenter;
-                                if (dR < 0)
-                                    dR = -dR;
+                                if (dR < 0) dR = -dR;
+
                                 if (dL <= halfWidth || dR <= halfWidth)
                                 {
                                     inText = true;
@@ -627,17 +643,17 @@ HICON CreateTrayIcon(bool isViet)
                         }
                         else
                         {
-                            // Vẽ chữ E: Cột dọc (dày 8px) + 3 gạch ngang dài đều (px 25->47) và dày bằng nhau chính xác 7.5px (khe hở đối xứng 6.75px)
+                            // Vẽ chữ E: Cột dọc + 3 gạch ngang dày bằng nhau
                             if (py >= 14.0f && py <= 50.0f)
                             {
                                 if (px >= 17.0f && px <= 25.0f)
                                     inText = true; // Cột dọc
                                 else if (px >= 25.0f && px <= 47.0f && py <= 21.5f)
-                                    inText = true; // Thanh ngang trên (14.0f -> 21.5f, dày 7.5f)
+                                    inText = true; // Thanh ngang trên
                                 else if (px >= 25.0f && px <= 47.0f && py >= 28.25f && py <= 35.75f)
-                                    inText = true; // Thanh ngang giữa (28.25f -> 35.75f, dày 7.5f)
+                                    inText = true; // Thanh ngang giữa
                                 else if (px >= 25.0f && px <= 47.0f && py >= 42.5f)
-                                    inText = true; // Thanh ngang dưới (42.5f -> 50.0f, dày 7.5f)
+                                    inText = true; // Thanh ngang dưới
                             }
                         }
 
@@ -650,30 +666,36 @@ HICON CreateTrayIcon(bool isViet)
             if (bgHits == 0)
             {
                 pixels[y * size + x] = 0x00000000;
-                // Bật bit 1 ở andMask để báo cho Windows điểm này hoàn toàn trong suốt (khử răng cưa góc bo)
-                andMask[(y * size + x) / 8] |= (0x80 >> (x % 8));
             }
             else
             {
-                float textAlpha = (float)fgHits / (float)bgHits;
-                float boxAlpha = (float)bgHits / 64.0f;
+                float rawTextAlpha = (float)fgHits / (float)bgHits;
+                // Bù sáng Gamma (Gamma Correction) cho biên chữ trắng trên nền đỏ/xanh
+                // Giúp triệt tiêu hoàn toàn hiệu ứng thắt cổ chai gây cảm giác "lưỡi cưa" ở kích thước nhỏ
+                float textAlpha = (size <= 28) ? powf(rawTextAlpha, 0.62f) : powf(rawTextAlpha, 0.80f);
+                float boxAlpha = (float)bgHits / (float)(subSamples * subSamples);
 
                 int bgR = isViet ? 215 : 25;
                 int bgG = isViet ? 30 : 110;
                 int bgB = isViet ? 35 : 215;
 
-                // Nhân thêm boxAlpha (Premultiplied Alpha) để viền khi thu nhỏ xuống 16x16 không bị viền răng cưa
-                int r = (int)((255.0f * textAlpha + bgR * (1.0f - textAlpha)) * boxAlpha);
-                int g = (int)((255.0f * textAlpha + bgG * (1.0f - textAlpha)) * boxAlpha);
-                int b = (int)((255.0f * textAlpha + bgB * (1.0f - textAlpha)) * boxAlpha);
-                int a = (int)(255.0f * boxAlpha);
+                // Hòa trộn màu với Premultiplied Alpha
+                int r = (int)((255.0f * textAlpha + bgR * (1.0f - textAlpha)) * boxAlpha + 0.5f);
+                int g = (int)((255.0f * textAlpha + bgG * (1.0f - textAlpha)) * boxAlpha + 0.5f);
+                int b = (int)((255.0f * textAlpha + bgB * (1.0f - textAlpha)) * boxAlpha + 0.5f);
+                int a = (int)(255.0f * boxAlpha + 0.5f);
+
+                if (r > 255) r = 255;
+                if (g > 255) g = 255;
+                if (b > 255) b = 255;
+                if (a > 255) a = 255;
 
                 pixels[y * size + x] = ((DWORD)a << 24) | ((DWORD)r << 16) | ((DWORD)g << 8) | (DWORD)b;
             }
         }
     }
 
-    return CreateIcon(GetModuleHandleW(NULL), size, size, 1, 32, andMask, (const BYTE *)pixels);
+    return CreateIcon(GetModuleHandleW(NULL), size, size, 1, 32, andMask.data(), (const BYTE *)pixels.data());
 }
 
 // Cập nhật trạng thái icon dưới System Tray
@@ -862,6 +884,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 {
     FreeConsole(); // Tự động ẩn cửa sổ Console đen ngay khi khởi chạy
 
+    // Bật nhận diện độ phân giải thực (DPI Awareness) để Windows không tự co giãn làm vỡ nét Icon nhỏ
+    SetProcessDPIAware();
+
     // Chống mở trùng nhiều tiến trình bộ gõ cùng lúc
     HANDLE hMutex = CreateMutexW(NULL, TRUE, L"VNKey_SingleInstance_Mutex");
     if (GetLastError() == ERROR_ALREADY_EXISTS)
@@ -871,17 +896,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 0;
     }
 
-    // Đăng ký lớp cửa sổ ẩn để nhận sự kiện System Tray
-    // Tạo icon V / E 64x64 trước khi đăng ký cửa sổ
-    g_hIconV = CreateTrayIcon(true);
-    g_hIconE = CreateTrayIcon(false);
+    // Lấy kích thước chuẩn xác của Icon nhỏ theo DPI màn hình hiện tại (16x16, 20x20, 24x24...)
+    int smallIconSize = GetSystemMetrics(SM_CXSMICON);
+    if (smallIconSize <= 0) smallIconSize = 16;
 
-    // Đăng ký lớp cửa sổ ẩn kèm theo Icon để tiêu đề thông báo lấy đúng icon nét
+    // Tạo bộ Icon nhỏ đúng tỷ lệ 1:1 cho vị trí cạnh chữ VNKey.exe và dưới khay hệ thống
+    g_hIconV = CreateTrayIcon(true, smallIconSize);
+    g_hIconE = CreateTrayIcon(false, smallIconSize);
+
+    // Tạo bộ Icon lớn 64x64 siêu nét cho phần nội dung thông báo Balloon
+    g_hIconLargeV = CreateTrayIcon(true, 64);
+    g_hIconLargeE = CreateTrayIcon(false, 64);
+
+    // Đăng ký lớp cửa sổ ẩn kèm theo cả Icon lớn và Icon nhỏ chuẩn kích thước
     WNDCLASSEXW wc = {0};
     wc.cbSize = sizeof(WNDCLASSEXW);
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
-    wc.hIcon = g_hIconV;
+    wc.hIcon = g_hIconLargeV;
     wc.hIconSm = g_hIconV;
     wc.lpszClassName = L"VNKeyHiddenWndClass";
     RegisterClassExW(&wc);
@@ -891,17 +923,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     g_nid.cbSize = sizeof(NOTIFYICONDATAW);
     g_nid.hWnd = g_hWnd;
-    g_nid.uID = 1;
+    g_nid.uID = 2026; // Đổi sang ID mới để xóa cache icon răng cưa cũ của Windows Notification
     g_nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP | NIF_INFO;
     g_nid.uCallbackMessage = WM_TRAYICON;
-    g_nid.hIcon = g_hIconV;
+    g_nid.hIcon = g_hIconV; // Icon nhỏ nét liền nằm cạnh chữ VNKey.exe và dưới System Tray
     wcscpy_s(g_nid.szTip, L"VNKey: Tiếng Việt (Ctrl+Shift)");
     wcscpy_s(g_nid.szInfoTitle, L"Bộ gõ VNKey đã bật");
     wcscpy_s(g_nid.szInfo, L"Nhấn Ctrl+Shift để chuyển chế độ V/E.\nClick chuột phải vào icon [V] dưới khay hệ thống để tùy chỉnh.");
 
     // 0x00000004 = NIIF_USER (dùng icon tùy chỉnh), 0x00000020 = NIIF_LARGE_ICON (hiển thị icon kích thước lớn)
     g_nid.dwInfoFlags = 0x00000004 | 0x00000020;
-    g_nid.hBalloonIcon = g_hIconV;
+    g_nid.hBalloonIcon = g_hIconLargeV; // Icon lớn 64x64 bên trong thân thông báo
 
     Shell_NotifyIconW(NIM_ADD, &g_nid);
 
@@ -927,6 +959,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         DestroyIcon(g_hIconV);
     if (g_hIconE)
         DestroyIcon(g_hIconE);
+    if (g_hIconLargeV)
+        DestroyIcon(g_hIconLargeV);
+    if (g_hIconLargeE)
+        DestroyIcon(g_hIconLargeE);
     if (hMutex)
         CloseHandle(hMutex);
 
