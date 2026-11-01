@@ -1,5 +1,5 @@
 # VNKey
-## Set up
+## Build
 
 1. **Open Compiler Settings:**
    * Open **Code::Blocks**.
