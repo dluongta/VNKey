@@ -1,5 +1,5 @@
-## VNKey
-### Set up
+# VNKey
+## Set up
 
 1. **Open Compiler Settings:**
    * Open **Code::Blocks**.
@@ -24,6 +24,6 @@
    * To apply the new configuration, go to the top menu and select **Build and run** (or press **F9** to build a new executable file).
 
 
-### Run
+## Run
 
 Open VNKey.exe
