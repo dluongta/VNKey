@@ -476,7 +476,6 @@ void UpdateTrayIcon()
 {
     g_nid.uFlags = NIF_ICON | NIF_TIP;
     g_nid.hIcon = g_isVietnamese ? g_hIconV : g_hIconE;
-    // CẬP NHẬT: Thêm Alt+Z vào Tooltip khi di chuột qua khay hệ thống
     wcscpy_s(g_nid.szTip, g_isVietnamese ? L"VNKey: Tiếng Việt (Ctrl+Shift | Alt+Z)" : L"VNKey: Tiếng Anh (Ctrl+Shift | Alt+Z)");
     Shell_NotifyIconW(NIM_MODIFY, &g_nid);
 }
@@ -513,7 +512,6 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 
         if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN)
         {
-            // CẬP NHẬT: Bắt Alt + Z để chuyển chế độ (Trả về 1 để không truyền phím này xuống các app khác)
             if (pKey->vkCode == 'Z' && altDown && !ctrlDown && !shiftDown && !winDown)
             {
                 ToggleVietnameseMode();
@@ -563,7 +561,6 @@ LRESULT CALLBACK LowLevelMouseProc(int nCode, WPARAM wParam, LPARAM lParam)
 void ShowContextMenu(HWND hWnd)
 {
     POINT pt; GetCursorPos(&pt); HMENU hMenu = CreatePopupMenu();
-    // CẬP NHẬT: Thêm thông tin nhấn Alt+Z vào Menu chuột phải
     AppendMenuW(hMenu, MF_STRING | (g_isVietnamese ? MF_CHECKED : 0), ID_TRAY_TOGGLE_VE, L"Bật Tiếng Việt (Ctrl+Shift hoặc Alt+Z)");
     AppendMenuW(hMenu, MF_STRING | (g_modernTone ? MF_CHECKED : 0), ID_TRAY_MODERN_TONE, L"Bỏ dấu kiểu mới");
     AppendMenuW(hMenu, MF_STRING | (g_chromeFix ? MF_CHECKED : 0), ID_TRAY_CHROME_FIX, L"Sửa lỗi thanh địa chỉ Chrome/Edge");
@@ -599,15 +596,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     FreeConsole();
     SetProcessDPIAware();
 
-    // Gọi lệnh này để ép Windows Explorer làm mới bộ nhớ đệm (Cache) biểu tượng
-    // Điều này đảm bảo file VNKey.exe được nạp lại icon mới toanh, sắc nét, không bị dính icon răng cưa cũ
     SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, NULL, NULL);
 
     HANDLE hMutex = CreateMutexW(NULL, TRUE, L"VNKey_SingleInstance_Mutex");
     if (GetLastError() == ERROR_ALREADY_EXISTS)
     {
-        MessageBoxW(NULL, L"Bộ gõ VNKey đang chạy ở khay hệ thống (góc dưới bên phải màn hình)!",
-                    L"VNKey", MB_OK | MB_ICONINFORMATION);
+        // Xóa MessageBox, tự động thoát (im lặng) nếu app đã chạy rồi.
         return 0;
     }
 
@@ -632,13 +626,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     g_nid.cbSize = sizeof(NOTIFYICONDATAW);
     g_nid.hWnd = g_hWnd;
-    // Đổi uID = 2029 để chắc chắn Windows bỏ cache khung thông báo cũ
     g_nid.uID = 2029;
     g_nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP | NIF_INFO;
     g_nid.uCallbackMessage = WM_TRAYICON;
     g_nid.hIcon = g_hIconV;
 
-    // CẬP NHẬT: Thêm thông báo Alt+Z lúc mới bật app
     wcscpy_s(g_nid.szTip, L"VNKey: Tiếng Việt (Ctrl+Shift | Alt+Z)");
     wcscpy_s(g_nid.szInfoTitle, L"Bộ gõ VNKey đã bật");
     wcscpy_s(g_nid.szInfo, L"Nhấn Ctrl+Shift hoặc Alt+Z để chuyển chế độ V/E.\nClick chuột phải vào icon [V] dưới khay hệ thống để tùy chỉnh.");
