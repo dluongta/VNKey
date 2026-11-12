@@ -1,0 +1,14 @@
+# depslib dependency file v1.0
+1794373769 source:d:\cpp\vnkey\resource.rc
+	<windows.h>
+
+1794288547 source:d:\cpp\vnkey\vnkey.cpp
+	<windows.h>
+	<shellapi.h>
+	<shlobj.h>
+	<string>
+	<vector>
+	<cwctype>
+	<cstring>
+	<cmath>
+
